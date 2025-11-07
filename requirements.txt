@@ -1,0 +1,38 @@
+# Core dependencies for Mistral-7B Mental Health Counseling Model
+
+# Transformers and PEFT (Updated for better Mistral support)
+transformers>=4.57.0
+peft>=0.8.0
+accelerate>=0.25.0
+tokenizers>=0.22.0
+
+# PyTorch (install appropriate version for your system)
+# For CUDA 11.8: pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+# For CUDA 12.1: pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+# For CPU only: pip install torch torchvision torchaudio
+torch>=2.0.0
+torchvision>=0.15.0
+torchaudio>=2.0.0
+
+# Model optimization
+bitsandbytes>=0.41.0  # For 4-bit quantization (optional)
+sentencepiece>=0.1.99  # Tokenizer support
+protobuf>=3.20.0
+
+# FastAPI server dependencies
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.0.0
+
+# Utilities
+numpy>=1.24.0
+scipy>=1.10.0
+safetensors>=0.4.0
+
+# Optional: For better performance
+einops>=0.7.0
+xformers>=0.0.22  # Optional: faster attention (requires compatible PyTorch)
+
+# Development tools (optional)
+ipython>=8.12.0
+jupyter>=1.0.0

@@ -1,0 +1,197 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# PyCharm
+.idea/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+server.log
+
+# OS Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Model files (large files)
+*.bin
+*.safetensors
+*.gguf
+*.pth
+*.pt
+*.h5
+*.onnx
+merged_mental_health_model/
+merged_mental_health_model.zip
+*.zip
+
+# Node.js (for Next.js frontend)
+node_modules/
+.next/
+out/
+.cache/
+next-env.d.ts
+
+# Package manager
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+pnpm-lock.yaml
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# Compiled files
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+
+# Temporary files
+*.swp
+*.swo
+*~
+.tmp/
+tmp/
+
+# Secrets & Credentials
+*.key
+*.pem
+*.crt
+*.p12
+*password*
+*secret*
+credentials.json
+service-account*.json
+
+# API Keys (be careful!)
+.env.production
+.env.development
+config/secrets.json
+
+# GCP/Cloud files
+gcp-key.json
+.gcloud/
+.config/
+
+# Documentation exports (optional - remove if you want to track)
+docs/final-report/*.pdf
+docs/final-report/*.html
+scripts/pdf-export/node_modules/
+
+# Build artifacts
+*.pyc
+*.pyo
+*.class
+*.jar
+*.war
+*.ear
+
+# Editor backups
+*~
+*.bak
+*.swp
+*.swo
+
+# Coverage reports
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pylint
+.pylint.d/
+
+# Backup files
+backup/
+*.backup
+
+# Compressed files (optional)
+# *.zip
+# *.tar.gz
+# *.rar
+# *.7z
+
+# Sensitive data
+database_backup.sql
+*.dump
+
+# Local configuration
+local_config.py
+local_settings.py
+
+# Machine learning checkpoints
+checkpoints/
+*.ckpt
+runs/
+wandb/
+mlruns/
+
+# Hugging Face cache
+.cache/
+transformers_cache/
+huggingface_hub/
+
+# CUDA/GPU cache
+.nv/
