@@ -304,7 +304,7 @@ async def send_message(
     message: ChatMessage,
     current_user: dict = Depends(get_current_user)
 ):
-    # Verify conversation belongs to user and get conversation history
+    # Verify conversation belongs to user
     with get_db_connection() as conn:
         cursor = conn.cursor(dictionary=True)
         cursor.execute("""
@@ -314,17 +314,6 @@ async def send_message(
         
         if not cursor.fetchone():
             raise HTTPException(status_code=404, detail="Conversation not found")
-        
-        # Retrieve conversation history (last 20 messages for context)
-        cursor.execute("""
-            SELECT content, role, created_at
-            FROM messages
-            WHERE conversation_id = %s
-            ORDER BY created_at ASC
-        """, (conversation_id,))
-        
-        conversation_history = cursor.fetchall()
-        print(f"📜 Retrieved {len(conversation_history)} previous messages for context")
         
         # Save user message
         user_message_id = str(uuid.uuid4())
@@ -340,8 +329,8 @@ async def send_message(
         """, (conversation_id,))
         conn.commit()
     
-    # Generate AI response with conversation history for context
-    ai_response = await generate_ai_response(message.content, conversation_history)
+    # Generate AI response using OpenAI API with Groq fallback
+    ai_response = await generate_ai_response(message.content)
     
     # Save AI response
     with get_db_connection() as conn:
@@ -412,55 +401,14 @@ async def delete_conversation(
     
     return {"message": "Conversation deleted successfully"}
 
-async def generate_ai_response(message: str, conversation_history: List[dict] = None) -> str:
-    """
-    Generate AI response using deployed Mistral-7B model with conversation history.
-    
-    Args:
-        message: Current user message
-        conversation_history: List of previous messages [{"role": "user/assistant", "content": "..."}]
-    """
+async def generate_ai_response(message: str) -> str:
+    """Generate AI response using deployed Mistral-7B model (CPU-only, may take 5-10 minutes)"""
     
     MISTRAL_API_URL = "http://35.238.200.49:8000/chat"
     
-    # Build context with last N messages (default: 10 exchanges = 20 messages)
-    MAX_HISTORY_MESSAGES = 20  # Last 10 user + 10 assistant messages
-    
-    # Prepare conversation context
-    context_messages = []
-    if conversation_history:
-        # Take only the last N messages to keep context manageable
-        recent_history = conversation_history[-MAX_HISTORY_MESSAGES:]
-        for msg in recent_history:
-            context_messages.append({
-                "role": msg["role"],
-                "content": msg["content"]
-            })
-    
-    # Add current message
-    context_messages.append({
-        "role": "user",
-        "content": message
-    })
-    
-    # Format for Mistral model (if it supports conversation history)
-    # Otherwise, concatenate into a single context string
-    context_string = ""
-    for msg in context_messages[:-1]:  # Exclude current message
-        if msg["role"] == "user":
-            context_string += f"User: {msg['content']}\n"
-        else:
-            context_string += f"Assistant: {msg['content']}\n"
-    
-    # Build final prompt with context
-    if context_string:
-        full_message = f"Previous conversation:\n{context_string}\nUser: {message}\nAssistant:"
-    else:
-        full_message = message
-    
     try:
-        payload = {"message": full_message}
-        print(f"🔄 Calling Mistral API with context ({len(context_messages)-1} previous messages)...")
+        payload = {"message": message}
+        print(f"🔄 Calling Mistral API at {MISTRAL_API_URL} with message: {message[:50]}...")
         print(f"⏳ CPU-only inference - this may take 5-10 minutes, please wait...")
         
         # CPU inference is VERY slow - give it 10 minutes
@@ -483,38 +431,24 @@ async def generate_ai_response(message: str, conversation_history: List[dict] = 
         print(f"❌ Cannot connect to Mistral API - server may be down: {str(e)}")
         return "I'm having trouble connecting to the mental health counseling server. The server may be offline. Please check if your GCP VM is running and the FastAPI server is active on port 8000."
     except asyncio.TimeoutError:
-        print(f"❌ Mistral API timeout - model inference took longer than 5 minutes")
-        return "I apologize, but the response is taking too long (over 5 minutes). The model is running on CPU which is very slow. Please try asking a shorter, simpler question, or consider upgrading to a GPU instance for faster responses."
+        print(f"❌ Mistral API timeout - model inference took longer than 10 minutes")
+        return "I apologize, but the response is taking too long (over 10-15 minutes). The model is running on CPU which is very slow. Please try asking a shorter, simpler question, or consider upgrading to a GPU instance for faster responses."
     except Exception as e:
         print(f"❌ Error calling Mistral API: {type(e).__name__} - {str(e)}")
         return "I'm having trouble connecting to the mental health counseling model right now. Please try again in a moment."
-async def call_openai_api(message: str, conversation_history: List[dict] = None) -> str:
-    """Call OpenAI API with conversation history"""
+async def call_openai_api(message: str) -> str:
+    """Call OpenAI API"""
     headers = {
         "Authorization": f"Bearer {OPENAI_API_KEY}",
         "Content-Type": "application/json"
     }
     
-    # Build messages array with history
-    messages = [
-        {"role": "system", "content": "You are a men's mental health chatbot, a helpful AI assistant. Provide clear, concise, and supportive responses for men's mental health."}
-    ]
-    
-    # Add conversation history (last 20 messages)
-    if conversation_history:
-        MAX_HISTORY = 20
-        for msg in conversation_history[-MAX_HISTORY:]:
-            messages.append({
-                "role": msg["role"],
-                "content": msg["content"]
-            })
-    
-    # Add current message
-    messages.append({"role": "user", "content": message})
-    
     payload = {
         "model": "gpt-3.5-turbo",
-        "messages": messages,
+        "messages": [
+            {"role": "system", "content": "You are a men's mental health chatbot, a helpful AI assistant. Provide clear, concise, and supportive responses for men's mental health."},
+            {"role": "user", "content": message}
+        ],
         "max_tokens": 512,
         "temperature": 0.7
     }
@@ -529,33 +463,19 @@ async def call_openai_api(message: str, conversation_history: List[dict] = None)
                 error_text = await response.text()
                 raise Exception(f"OpenAI API returned {response.status}: {error_text}")
 
-async def call_groq_api(message: str, conversation_history: List[dict] = None) -> str:
-    """Call Groq API (faster alternative) with conversation history"""
+async def call_groq_api(message: str) -> str:
+    """Call Groq API (faster alternative)"""
     headers = {
         "Authorization": f"Bearer {GROQ_API_KEY}",
         "Content-Type": "application/json"
     }
     
-    # Build messages array with history
-    messages = [
-        {"role": "system", "content": "You are a men's mental health chatbot, a helpful AI assistant. Provide clear, concise, and supportive responses for men's mental health."}
-    ]
-    
-    # Add conversation history (last 20 messages)
-    if conversation_history:
-        MAX_HISTORY = 20
-        for msg in conversation_history[-MAX_HISTORY:]:
-            messages.append({
-                "role": msg["role"],
-                "content": msg["content"]
-            })
-    
-    # Add current message
-    messages.append({"role": "user", "content": message})
-    
     payload = {
         "model": "mixtral-8x7b-32768",
-        "messages": messages,
+        "messages": [
+            {"role": "system", "content": "You are a men's mental health chatbot, a helpful AI assistant. Provide clear, concise, and supportive responses for men's mental health."},
+            {"role": "user", "content": message}
+        ],
         "max_tokens": 512,
         "temperature": 0.7
     }
